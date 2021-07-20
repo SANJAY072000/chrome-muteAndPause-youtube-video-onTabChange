@@ -1,15 +1,49 @@
-function muteOtherTabs() {
-  chrome.runtime.sendMessage({ type: "mute_other_streams" });
-}
+document.addEventListener(
+  "visibilitychange",
+  function () {
+    if (document.hidden !== undefined) {
+      chrome.runtime.sendMessage({ minimized: document.hidden }, function () {
+        void chrome.runtime.lastError;
+      });
+    }
+  },
+  false
+);
 
-function setupPageVisibilityChangeListener() {
-  document.addEventListener("visibilitychange", () => {
-    // Mute other tabs when switching to this one
-    if (document.visibilityState === "visible") muteOtherTabs();
-  });
-}
+var observer = new IntersectionObserver(
+  function (entries) {
+    if (entries[0].isIntersecting === true) {
+      chrome.runtime.sendMessage({ visible: true }, function () {
+        void chrome.runtime.lastError;
+      });
+    } else {
+      chrome.runtime.sendMessage({ visible: false }, function () {
+        void chrome.runtime.lastError;
+      });
+    }
+  },
+  { threshold: [0] }
+);
 
-setupPageVisibilityChangeListener();
+document.onload = function (e) {
+  videoElements = query.querySelectorAll("video");
+  for (i = 0; i < videoElements.length; i++) {
+    observer.observe(videoElements[i]);
+  }
+};
 
-// Mute other tabs when opening this one if the user is on it
-if (document.visibilityState === "visible") muteOtherTabs();
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+  if (!("action" in request)) {
+    return;
+  }
+
+  var videoElements = document.querySelectorAll("video");
+
+  for (i = 0; i < videoElements.length; i++) {
+    if (request.action === "stop" && !videoElements[i].paused) {
+      videoElements[i].pause();
+    } else if (request.action === "resume" && videoElements[i].paused) {
+      videoElements[i].play();
+    }
+  }
+});

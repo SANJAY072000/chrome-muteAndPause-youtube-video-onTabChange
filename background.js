@@ -1,26 +1,55 @@
-// Message listener in milli-seconds
-const time_for_retry = 500;
-const time_for_delay = 50;
+let previous_tab = 0,
+  pause,
+  resume;
+pause = resume = true;
 
-chrome.runtime.onMessage.addListener((msg, send, reply) => {
-  if (msg.type === "mute_other_streams") muteTabs(send.tab, 0);
-});
+function pauseVideo(tab) {
+  chrome.tabs.sendMessage(tab.id, { action: "stop" });
+}
 
-function muteTabs(curTab, firstTime) {
-  chrome.tabs.query({ url: "https://*.youtube.com/*" }, (tabs) => {
-    if (chrome.runtime.lastError) {
-      // If less than 1sec has elapsed since the content script sent the command, retry after a small delay
+function resumeVideo(tab) {
+  chrome.tabs.sendMessage(tab.id, { action: "resume" });
+}
 
-      if (firstTime < time_for_retry)
-        setTimeout(() => muteTabs(curTab, firstTime + time_for_delay));
-      else console.error(chrome.runtime.lastError.message);
-      return;
+function change_tabs(tabId) {
+  if (pause && previous_tab) {
+    chrome.tabs.get(previous_tab, function (prev) {
+      if (!chrome.runtime.lastError) {
+        pauseVideo(prev);
+      }
+    });
+  }
+  previous_tab = tabId;
+  chrome.tabs.get(tabId, function (tab) {
+    if (resume && !chrome.runtime.lastError) {
+      resumeVideo(tab);
     }
-
-    tabs.forEach((tab) =>
-      chrome.tabs.update(tab.id, {
-        muted: tab.id !== curTab.id,
-      })
-    );
   });
 }
+
+chrome.tabs.onActivated.addListener(function (info) {
+  change_tabs(info.tabId);
+});
+
+chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
+  if (
+    "status" in changeInfo &&
+    changeInfo.status === "complete" &&
+    !tab.active
+  ) {
+    pauseVideo(tab);
+  }
+});
+
+chrome.windows.onFocusChanged.addListener(function (info) {
+  if (previous_tab) {
+    chrome.tabs.get(previous_tab, function (tab) {
+      if (tab === undefined || chrome.runtime.lastError) {
+        return;
+      }
+      if (!tab.active && pause) {
+        pauseVideo(tab);
+      }
+    });
+  }
+});
