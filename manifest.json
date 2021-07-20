@@ -1,14 +1,18 @@
 {
   "manifest_version": 3,
-  "name": "YouTube Video Auto-Mute",
+  "name": "Auto Mute",
   "version": "1.1.1",
   "description": "This extension automatically mutes youtube videos when switch between multiple tabs",
+  "action": {
+    "default_icon": {
+      "128": "/images/youtube.png"
+    }
+  },
   "icons": {
-    "youtube": "images/youtube.png"
+    "128": "images/youtube.png"
   },
   "background": {
-    "scripts": ["background.js"],
-    "persistent": false
+    "service_worker": "background.js"
   },
   "content_scripts": [
     {
@@ -17,5 +21,6 @@
       "run_at": "document_idle"
     }
   ],
-  "permissions": ["tabs"]
+  "permissions": ["storage", "activeTab", "scripting", "tabs"],
+  "host_permissions": ["https://www.google.com/*"]
 }
