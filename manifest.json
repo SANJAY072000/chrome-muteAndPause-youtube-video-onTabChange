@@ -4,7 +4,7 @@
   "version": "1.1.1",
   "description": "This extension automatically mutes youtube videos when switch between multiple tabs",
   "icons": {
-    "youtube": "icon/youtube.png"
+    "youtube": "images/youtube.png"
   },
   "background": {
     "scripts": ["background.js"],
